@@ -1,5 +1,8 @@
+---
 {{ ansible_managed | comment }}
 
+{% if nrinfragent_config != {} %}
 {{ nrinfragent_config | to_nice_yaml }}
+{% endif %}
 
 license_key: {{ nrinfragent_license_key }}
