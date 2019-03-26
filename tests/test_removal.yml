@@ -1,0 +1,22 @@
+---
+- name: Testing the idempotence with the default vars
+  hosts: localhost
+  vars:
+    nrinfragent_license_key: 1000000000000000000000000000000000000000
+    nrinfragent_config:
+      display_name: awesome-node
+      custom_attributes:
+        env: production
+        team: awesome-team
+        purpose: testing-ansible-role
+    nrinfragent_uninstall: True
+
+  roles:
+    - nrinfragent
+
+  post_tasks:
+    - name: Package should be uninstalled
+      shell: 'dpkg --list | grep newrelic-infra'
+      register: _newrelic_infra_package
+      failed_when: "'ii  newrelic-infra' in _newrelic_infra_package.stdout"
+      changed_when: False

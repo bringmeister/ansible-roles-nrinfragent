@@ -13,12 +13,18 @@
   apt_key:
     url: "{{ nrinfragent_repo_key }}"
     state: present
-  when: ansible_os_family|lower == 'debian'
+  when: ansible_os_family|lower == 'debian' and not nrinfragent_uninstall
 
-- name: RPM repo key should be added
+- name: APT repo key should be removed
+  apt_key:
+    id: "8ECCE87C"
+    state: absent
+  when: nrinfragent_uninstall
+
+- name: RPM repo key should be {{ 'removed' if nrinfragent_uninstall else 'added' }}
   rpm_key:
     key: "{{ nrinfragent_repo_key }}"
-    state: present
+    state: "{{ 'absent' if nrinfragent_uninstall else 'present' }}"
   when: ansible_os_family|lower == 'redhat'
 
 - name: apt-transport-https package should be present
@@ -27,20 +33,23 @@
     state: present
   when: ansible_os_family|lower == 'debian'
 
-- name: APT repo should be added
+- debug:
+    msg: "{{ ansible_lsb }}"
+
+- name: APT repo should be {{ 'removed' if nrinfragent_uninstall else 'added' }}
   apt_repository:
     repo: "{{ nrinfragent_apt_repo }}"
-    state: present
+    state: "{{ 'absent' if nrinfragent_uninstall else 'present' }}"
   when: ansible_os_family|lower == 'debian'
 
-- name: YUM repo should be added
+- name: YUM repo should be {{ 'removed' if nrinfragent_uninstall else 'added' }}
   yum_repository:
     baseurl: "{{ nrinfragent_yum_repo }}"
     gpgcheck: True
     gpgkey: "{{ nrinfragent_repo_key }}"
     name: 'New-Relic-Infrastructure'
     repo_gpgcheck: True
-    state: present
+    state: "{{ 'absent' if nrinfragent_uninstall else 'present' }}"
     description: "{{ nrinfragent_yum_repo_desc }}"
   register: _nrinfragent_yum_repo
   when: ansible_os_family|lower == 'redhat'
@@ -55,19 +64,20 @@
   when:
     - ansible_os_family|lower == 'redhat'
     - _nrinfragent_yum_repo.changed
+    - not nrinfragent_uninstall
 
-- name: APT package should be installed
+- name: APT package should be {{ 'removed' if nrinfragent_uninstall else 'installed' }}
   apt:
     name: "newrelic-infra={{ nrinfragent_version }}"
-    state: present
+    state: "{{ 'absent' if nrinfragent_uninstall else 'present' }}"
     update_cache: True
     cache_valid_time: 7200
   when: ansible_os_family|lower == 'debian'
 
-- name: YUM package should be installed
+- name: YUM package should be {{ 'removed' if nrinfragent_uninstall else 'installed' }}
   yum:
     name: "newrelic-infra-{{ nrinfragent_version }}"
-    state: present
+    state: "{{ 'absent' if nrinfragent_uninstall else 'present' }}"
     update_cache: True
   when: ansible_os_family|lower == 'redhat'
 
@@ -77,9 +87,17 @@
     dest: /etc/newrelic-infra.yml
     mode: 0600
   notify: restart newrelic-infra
+  when: not nrinfragent_uninstall
+
+- name: Remove Configuration file
+  file:
+    state: absent
+    path: /etc/newrelic-infra.yml
+  when: nrinfragent_uninstall
 
 - name: Service should be started and enabled
   service:
     name: newrelic-infra
     state: started
     enabled: True
+  when: not nrinfragent_uninstall

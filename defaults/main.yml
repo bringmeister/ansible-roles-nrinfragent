@@ -3,3 +3,4 @@ nrinfragent_license_key: ""
 nrinfragent_state:       "latest"
 nrinfragent_version:     "1.0.1052"
 nrinfragent_config:      {}
+nrinfragent_uninstall:   False
